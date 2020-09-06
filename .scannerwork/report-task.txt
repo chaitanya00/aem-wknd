@@ -1,0 +1,6 @@
+projectKey=system-2
+serverUrl=http://localhost:9000
+serverVersion=8.3.0.34182
+dashboardUrl=http://localhost:9000/dashboard?id=system-2
+ceTaskId=AXRh-wKcJmpQn0DM36de
+ceTaskUrl=http://localhost:9000/api/ce/task?id=AXRh-wKcJmpQn0DM36de
