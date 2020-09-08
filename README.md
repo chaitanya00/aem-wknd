@@ -1,58 +1,92 @@
-# Sample AEM project template
+# Goof - Snyk's vulnerable demo app
+[![Known Vulnerabilities](https://snyk.io/test/github/snyk/goof/badge.svg?style=flat-square)](https://snyk.io/test/github/snyk/goof)
 
-This is a project template for AEM-based applications. It is intended as a best-practice set of examples as well as a potential starting point to develop your own functionality.
+A vulnerable Node.js demo application, based on the [Dreamers Lab tutorial](http://dreamerslab.com/blog/en/write-a-todo-list-with-express-and-mongodb/).
 
-## Modules
+## Features
 
-The main parts of the template are:
+This vulnerable app includes the following capabilities to experiment with:
+* [Exploitable packages](#exploiting-the-vulnerabilities) with known vulnerabilities
+* [Docker Image Scanning](#docker-image-scanning) for base images with known vulnerabilities in system libraries
+* [Runtime alerts](#runtime-alerts) for detecting an invocation of vulnerable functions in open source dependencies
 
-* core: Java bundle containing all core functionality like OSGi services, listeners or schedulers, as well as component-related Java code such as servlets or request filters.
-* ui.apps: contains the /apps (and /etc) parts of the project, ie JS&CSS clientlibs, components, templates, runmode specific configs as well as Hobbes-tests
-* ui.content: contains sample content using the components from the ui.apps
-* ui.tests: Java bundle containing JUnit tests that are executed server-side. This bundle is not to be deployed onto production.
-* ui.launcher: contains glue code that deploys the ui.tests bundle (and dependent bundles) to the server and triggers the remote JUnit execution
+## Running
+```bash
+mongod &
 
-## How to build
+git clone https://github.com/Snyk/snyk-demo-todo
+npm install
+npm start
+```
+This will run Goof locally, using a local mongo on the default port and listening on port 3001 (http://localhost:3001)
 
-To build all the modules run in the project root directory the following command with Maven 3:
+## Running with docker-compose
+```bash
+docker-compose up --build
+docker-compose down
+```
 
-    mvn clean install
+### Heroku usage
+Goof requires attaching a MongoLab service to be deployed as a Heroku app. 
+That sets up the MONGOLAB_URI env var so everything after should just work. 
 
-If you have a running AEM instance you can build and package the whole project and deploy into AEM with  
+### CloudFoundry usage
+Goof requires attaching a MongoLab service and naming it "goof-mongo" to be deployed on CloudFoundry. 
+The code explicitly looks for credentials to that service. 
 
-    mvn clean install -PautoInstallPackage
-    
-Or to deploy it to a publish instance, run
+### Cleanup
+To bulk delete the current list of TODO items from the DB run:
+```bash
+npm run cleanup
+```
 
-    mvn clean install -PautoInstallPackagePublish
-    
-Or alternatively
+## Exploiting the vulnerabilities
 
-    mvn clean install -PautoInstallPackage -Daem.port=4503
+This app uses npm dependencies holding known vulnerabilities.
 
-Or to deploy only the bundle to the author, run
+Here are the exploitable vulnerable packages:
+- [Mongoose - Buffer Memory Exposure](https://snyk.io/vuln/npm:mongoose:20160116)
+- [st - Directory Traversal](https://snyk.io/vuln/npm:st:20140206)
+- [ms - ReDoS](https://snyk.io/vuln/npm:ms:20151024)
+- [marked - XSS](https://snyk.io/vuln/npm:marked:20150520)
 
-    mvn clean install -PautoInstallBundle
+The `exploits/` directory includes a series of steps to demonstrate each one.
 
-## Testing
+## Docker Image Scanning
 
-There are three levels of testing contained in the project:
+The `Dockerfile` makes use of a base image (`node:6-stretch`) that is known to have system libraries with vulnerabilities.
 
-* unit test in core: this show-cases classic unit testing of the code contained in the bundle. To test, execute:
+To scan the image for vulnerabilities, run:
+```bash
+snyk test --docker node:6-stretch --file=Dockerfile
+```
 
-    mvn clean test
+To monitor this image and receive alerts with Snyk:
+```bash
+snyk monitor --docker node:6-stretch
+```
 
-* server-side integration tests: this allows to run unit-like tests in the AEM-environment, ie on the AEM server. To test, execute:
+## Runtime Alerts
 
-    mvn clean verify -PintegrationTests
+Snyk provides the ability to monitor application runtime behavior and detect an invocation of a function is known to be vulnerable and used within open source dependencies that the application makes use of.
 
-* client-side Hobbes.js tests: JavaScript-based browser-side tests that verify browser-side behavior. To test:
+The agent is installed and initialized in [app.js](./app.js#L5).
 
-    in the browser, open the page in 'Developer mode', open the left panel and switch to the 'Tests' tab and find the generated 'MyName Tests' and run them.
+For the agent to report back to your snyk account on the vulnerabilities it detected it needs to know which project on Snyk to associate with the monitoring. Due to that, we need to provide it with the project id through an environment variable `SNYK_PROJECT_ID`
 
+To run the Node.js app with runtime monitoring:
+```bash
+SNYK_PROJECT_ID=<PROJECT_ID> npm start
+```
 
-## Maven settings
+** The app will continue to work normally even if not provided a project id
 
-The project comes with the auto-public repository configured. To setup the repository in your Maven settings, refer to:
+## Fixing the issues
+To find these flaws in this application (and in your own apps), run:
+```
+npm install -g snyk
+snyk wizard
+```
 
-    http://helpx.adobe.com/experience-manager/kb/SetUpTheAdobeMavenRepository.html
+In this application, the default `snyk wizard` answers will fix all the issues.
+When the wizard is done, restart the application and run the exploits again to confirm they are fixed.
